@@ -80,8 +80,8 @@ libapplypatch_static_libs = [
 // librecovery_defaults uses many shared libs that we want to avoid using in tests (e.g. we don't
 // have 32-bit android.hardware.health@2.0.so or libbootloader_message.so on marlin).
 librecovery_static_libs = [
-    "librecovery",
-    "librecovery_fastboot",
+    //"librecovery",
+    //"librecovery_fastboot",
     "libinstall",
     "librecovery_ui",
     "libminui",

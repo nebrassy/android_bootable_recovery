@@ -39,6 +39,9 @@ constexpr const char* METADATA_ROOT = "/metadata";
 static bool EraseVolume(const char* volume, RecoveryUI* ui) {
   bool is_cache = (strcmp(volume, CACHE_ROOT) == 0);
 
+  // ui->SetBackground(RecoveryUI::ERASING);
+  // ui->SetProgressType(RecoveryUI::INDETERMINATE);
+
   std::vector<saved_log_file> log_files;
   if (is_cache) {
     // If we're reformatting /cache, we load any past logs (i.e. "/cache/recovery/last_*") and the
@@ -46,7 +49,7 @@ static bool EraseVolume(const char* volume, RecoveryUI* ui) {
     log_files = ReadLogFilesToMemory();
   }
 
-  ui->Print("Formatting %s...\n", volume);
+  // ui->Print("Formatting %s...\n", volume);
 
   ensure_path_unmounted(volume);
 
@@ -59,10 +62,10 @@ static bool EraseVolume(const char* volume, RecoveryUI* ui) {
   return (result == 0);
 }
 
-bool WipeCache(RecoveryUI* ui, const std::function<bool()>& confirm_func) {
+bool WipeCache(const std::function<bool()>& confirm_func) {
   bool has_cache = volume_for_mount_point("/cache") != nullptr;
   if (!has_cache) {
-    ui->Print("No /cache partition found.\n");
+    // ui->Print("No /cache partition found.\n");
     return false;
   }
 
@@ -70,35 +73,35 @@ bool WipeCache(RecoveryUI* ui, const std::function<bool()>& confirm_func) {
     return false;
   }
 
-  ui->Print("\n-- Wiping cache...\n");
-  ui->SetBackground(RecoveryUI::ERASING);
-  ui->SetProgressType(RecoveryUI::INDETERMINATE);
+  // ui->Print("\n-- Wiping cache...\n");
+  // ui->SetBackground(RecoveryUI::ERASING);
+  // ui->SetProgressType(RecoveryUI::INDETERMINATE);
 
-  bool success = EraseVolume("/cache", ui);
-  ui->Print("Cache wipe %s.\n", success ? "complete" : "failed");
+  bool success = EraseVolume("/cache", false);
+  // ui->Print("Cache wipe %s.\n", success ? "complete" : "failed");
   return success;
 }
 
-bool WipeData(Device* device) {
-  RecoveryUI* ui = device->GetUI();
-  ui->Print("\n-- Wiping data...\n");
-  ui->SetBackground(RecoveryUI::ERASING);
-  ui->SetProgressType(RecoveryUI::INDETERMINATE);
+bool WipeData(Device* device, bool convert_fbe) {
+  // RecoveryUI* ui = device->GetUI();
+  // ui->Print("\n-- Wiping data...\n");
+  // ui->SetBackground(RecoveryUI::ERASING);
+  // ui->SetProgressType(RecoveryUI::INDETERMINATE);
 
-  if (!FinishPendingSnapshotMerges(device)) {
-    ui->Print("Unable to check update status or complete merge, cannot wipe partitions.\n");
-    return false;
-  }
+  // if (!FinishPendingSnapshotMerges(device)) {
+  //   ui->Print("Unable to check update status or complete merge, cannot wipe partitions.\n");
+  //   return false;
+  // }
 
   bool success = device->PreWipeData();
   if (success) {
-    success &= EraseVolume(DATA_ROOT, ui);
+    success &= EraseVolume(DATA_ROOT);
     bool has_cache = volume_for_mount_point("/cache") != nullptr;
     if (has_cache) {
-      success &= EraseVolume(CACHE_ROOT, ui);
+      success &= EraseVolume(CACHE_ROOT);
     }
     if (volume_for_mount_point(METADATA_ROOT) != nullptr) {
-      success &= EraseVolume(METADATA_ROOT, ui);
+      success &= EraseVolume(METADATA_ROOT);
     }
   }
   ui->Print("Resetting memtag message...\n");
@@ -110,6 +113,6 @@ bool WipeData(Device* device) {
   if (success) {
     success &= device->PostWipeData();
   }
-  ui->Print("Data wipe %s.\n", success ? "complete" : "failed");
+  // ui->Print("Data wipe %s.\n", success ? "complete" : "failed");
   return success;
 }

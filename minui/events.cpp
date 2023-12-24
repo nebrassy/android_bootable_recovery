@@ -49,6 +49,9 @@ constexpr size_t BITS_TO_LONGS(size_t bits) {
 struct FdInfo {
   android::base::unique_fd fd;
   ev_callback cb;
+#ifdef TW_USE_MINUI_WITH_DATA
+  void* data;
+#endif
 };
 
 static bool g_allow_touch_inputs = true;
@@ -67,6 +70,7 @@ static bool test_bit(size_t bit, unsigned long* array) { // NOLINT
   return (array[bit / BITS_PER_LONG] & (1UL << (bit % BITS_PER_LONG))) != 0;
 }
 
+#ifdef TW_USE_MINUI_WITH_OPTIONAL_TOUCH_EVENTS
 static bool should_add_input_device(int fd, bool allow_touch_inputs) {
   // Use unsigned long to match ioctl's parameter type.
   unsigned long ev_bits[BITS_TO_LONGS(EV_MAX)];  // NOLINT
@@ -142,6 +146,14 @@ static int inotify_cb(int fd, __unused uint32_t epevents) {
 }
 
 int ev_init(ev_callback input_cb, bool allow_touch_inputs) {
+#else
+#ifdef TW_USE_MINUI_WITH_DATA
+int ev_init(ev_callback input_cb, void* data) {
+#else
+int ev_init(ev_callback input_cb) {
+#endif
+  bool allow_touch_inputs = false;
+#endif
   g_epoll_fd.reset();
 
   android::base::unique_fd epoll_fd(epoll_create1(EPOLL_CLOEXEC));
@@ -170,9 +182,11 @@ int ev_init(ev_callback input_cb, bool allow_touch_inputs) {
     android::base::unique_fd fd(openat(dirfd(dir.get()), de->d_name, O_RDONLY | O_CLOEXEC));
     if (fd == -1) continue;
 
+#ifdef TW_USE_MINUI_WITH_OPTIONAL_TOUCH_EVENTS
     if (!should_add_input_device(fd, allow_touch_inputs)) {
       continue;
     }
+#endif
 
     epoll_event ev;
     ev.events = EPOLLIN | EPOLLWAKEUP;
@@ -197,7 +211,9 @@ int ev_init(ev_callback input_cb, bool allow_touch_inputs) {
 
   g_saved_input_cb = input_cb;
   g_allow_touch_inputs = allow_touch_inputs;
+#ifdef TW_USE_MINUI_WITH_OPTIONAL_TOUCH_EVENTS
   ev_add_fd(std::move(inotify_fd), inotify_cb);
+#endif
 
   return 0;
 }
@@ -267,36 +283,11 @@ int ev_get_input(int fd, uint32_t epevents, input_event* ev) {
   return -1;
 }
 
-int ev_sync_sw_state(const ev_set_sw_callback& set_sw_cb) {
-  // Use unsigned long to match ioctl's parameter type.
-  unsigned long ev_bits[BITS_TO_LONGS(EV_MAX)];  // NOLINT
-  unsigned long sw_bits[BITS_TO_LONGS(SW_MAX)];  // NOLINT
-
-  for (size_t i = 0; i < g_ev_dev_count; ++i) {
-    memset(ev_bits, 0, sizeof(ev_bits));
-    memset(sw_bits, 0, sizeof(sw_bits));
-
-    if (ioctl(ev_fdinfo[i].fd, EVIOCGBIT(0, sizeof(ev_bits)), ev_bits) == -1) {
-      continue;
-    }
-    if (!test_bit(EV_SW, ev_bits)) {
-      continue;
-    }
-    if (ioctl(ev_fdinfo[i].fd, EVIOCGSW(sizeof(sw_bits)), sw_bits) == -1) {
-      continue;
-    }
-
-    for (int code = 0; code <= SW_MAX; code++) {
-      if (test_bit(code, sw_bits)) {
-        set_sw_cb(code, 1);
-      }
-    }
-  }
-
-  return 0;
-}
-
+#ifdef TW_USE_MINUI_WITH_DATA
+int ev_sync_key_state(ev_set_key_callback set_key_cb, void* data) {
+#else
 int ev_sync_key_state(const ev_set_key_callback& set_key_cb) {
+#endif
   // Use unsigned long to match ioctl's parameter type.
   unsigned long ev_bits[BITS_TO_LONGS(EV_MAX)];    // NOLINT
   unsigned long key_bits[BITS_TO_LONGS(KEY_MAX)];  // NOLINT
@@ -317,7 +308,11 @@ int ev_sync_key_state(const ev_set_key_callback& set_key_cb) {
 
     for (int code = 0; code <= KEY_MAX; code++) {
       if (test_bit(code, key_bits)) {
+#ifdef TW_USE_MINUI_WITH_DATA
+        set_key_cb(code, 1, data);
+#else
         set_key_cb(code, 1);
+#endif
       }
     }
   }
@@ -354,6 +349,7 @@ void ev_iterate_available_keys(const std::function<void(int)>& f) {
   }
 }
 
+#ifdef TW_USE_MINUI_WITH_OPTIONAL_TOUCH_EVENTS
 void ev_iterate_touch_inputs(const std::function<void(int)>& action) {
   for (size_t i = 0; i < g_ev_dev_count; ++i) {
     // Use unsigned long to match ioctl's parameter type.
@@ -377,3 +373,4 @@ void ev_iterate_touch_inputs(const std::function<void(int)>& action) {
     }
   }
 }
+#endif

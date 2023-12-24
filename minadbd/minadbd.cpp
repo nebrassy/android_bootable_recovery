@@ -69,8 +69,8 @@ int main(int argc, char** argv) {
   init_transport_registration();
   usb_init();
 
-  VLOG(ADB) << "Event loop starting";
-  fdevent_loop();
+    //VLOG(ADB) << "Event loop starting";
+    fdevent_loop();
 
   return 0;
 }

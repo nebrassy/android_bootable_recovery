@@ -146,7 +146,7 @@ static bool StartInstallPackageFuse(std::string_view path) {
   return run_fuse_sideload(std::move(fuse_data_provider)) == 0;
 }
 
-InstallResult InstallWithFuseFromPath(std::string_view path, Device* device) {
+InstallResult InstallWithFuseFromPath(std::string_view path, __attribute__((unused)) RecoveryUI* ui) {
   // We used to use fuse in a thread as opposed to a process. Since accessing
   // through fuse involves going from kernel to userspace to kernel, it leads
   // to deadlock when a page fault occurs. (Bug: 26313124)
@@ -182,10 +182,9 @@ InstallResult InstallWithFuseFromPath(std::string_view path, Device* device) {
       }
     }
     auto package =
-        Package::CreateFilePackage(FUSE_SIDELOAD_HOST_PATHNAME,
-                                   std::bind(&RecoveryUI::SetProgress, ui, std::placeholders::_1));
-    result = InstallPackage(package.get(), FUSE_SIDELOAD_HOST_PATHNAME, false, 0 /* retry_count */,
-                            device);
+        Package::CreateFilePackage(FUSE_SIDELOAD_HOST_PATHNAME, nullptr);
+    result =
+        InstallPackage(package.get(), FUSE_SIDELOAD_HOST_PATHNAME, false, 0 /* retry_count */);
     break;
   }
 

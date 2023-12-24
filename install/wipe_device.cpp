@@ -144,15 +144,15 @@ static std::unique_ptr<Package> ReadWipePackage(size_t wipe_package_size) {
   }
 
   return Package::CreateMemoryPackage(
-      std::vector<uint8_t>(wipe_package.begin(), wipe_package.end()), nullptr);
+      std::vector<uint8_t>(wipe_package.begin(), wipe_package.end()));
 }
 
 // Checks if the wipe package matches expectation. If the check passes, reads the list of
 // partitions to wipe from the package. Checks include
 // 1. verify the package.
 // 2. check metadata (ota-type, pre-device and serial number if having one).
-static bool CheckWipePackage(Package* wipe_package, RecoveryUI* ui) {
-  if (!verify_package(wipe_package, ui)) {
+static bool CheckWipePackage(Package* wipe_package, __attribute__((unused)) RecoveryUI* ui) {
+  if (!verify_package(wipe_package)) {
     LOG(ERROR) << "Failed to verify package";
     return false;
   }

@@ -38,9 +38,9 @@ enum class PackageType {
 class Package : public VerifierInterface {
  public:
   static std::unique_ptr<Package> CreateMemoryPackage(
-      const std::string& path, const std::function<void(float)>& set_progress);
+      const std::string& path);
   static std::unique_ptr<Package> CreateMemoryPackage(
-      std::vector<uint8_t> content, const std::function<void(float)>& set_progress);
+      std::vector<uint8_t> content);
   static std::unique_ptr<Package> CreateFilePackage(const std::string& path,
                                                     const std::function<void(float)>& set_progress);
 

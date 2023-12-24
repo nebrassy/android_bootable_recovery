@@ -40,6 +40,9 @@
 #include <android-base/unique_fd.h>
 #include <openssl/sha.h>
 
+#include "bmlutils/bmlutils.h"
+#include "mtdutils/mtdutils.h"
+
 #include "edify/expr.h"
 #include "otautil/paths.h"
 #include "otautil/print_sha1.h"
@@ -186,15 +189,8 @@ static bool WriteBufferToPartition(const FileContents& file_contents, const Part
       return false;
     }
 
-    unsigned char buffer[4096];
-    start = len;
-    for (size_t p = 0; p < len; p += sizeof(buffer)) {
-      size_t to_read = len - p;
-      if (to_read > sizeof(buffer)) {
-        to_read = sizeof(buffer);
-      }
+    const char* partition = pieces[1].c_str();
 
-      if (!android::base::ReadFully(fd, buffer, to_read)) {
         PLOG(ERROR) << "Failed to verify-read " << partition << " at " << p;
         return false;
       }
